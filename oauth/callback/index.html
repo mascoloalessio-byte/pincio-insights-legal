@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; font-src 'none'; object-src 'none'; media-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; manifest-src 'none'; form-action 'none'; base-uri 'none'">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>TikTok authorization callback — Pincio Insights</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #1f2937;
+      background: #f8fafc;
+    }
+    body { margin: 0; }
+    main { width: min(46rem, calc(100% - 2rem)); margin: 0 auto; padding: 3rem 0 5rem; }
+    h1 { color: #111827; font-size: clamp(2rem, 7vw, 3rem); line-height: 1.15; margin-bottom: 0.75rem; }
+    p { line-height: 1.65; }
+    .status { padding: 1rem; border-left: 0.3rem solid #2563eb; background: #eff6ff; }
+    .status.error { border-color: #b91c1c; background: #fef2f2; }
+    .field { margin-top: 1.5rem; }
+    .field label { display: block; margin-bottom: 0.4rem; font-weight: 700; color: #111827; }
+    .value-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; }
+    output { display: block; min-height: 1.5rem; overflow-wrap: anywhere; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 0.4rem; background: #fff; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    button { padding: 0.65rem 0.9rem; border: 0; border-radius: 0.4rem; color: #fff; background: #111827; cursor: pointer; font: inherit; }
+    button:disabled { cursor: not-allowed; opacity: 0.45; }
+    button:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+    .copy-result { min-height: 1.5rem; color: #475569; }
+    [hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>TikTok authorization</h1>
+    <p id="status" class="status" role="status">Reading the authorization response…</p>
+
+    <section id="details" aria-label="Authorization response" hidden>
+      <div class="field">
+        <label for="code">Authorization code</label>
+        <div class="value-row">
+          <output id="code">Not provided</output>
+          <button type="button" data-copy="code">Copy code</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="state">State</label>
+        <div class="value-row">
+          <output id="state">Not provided</output>
+          <button type="button" data-copy="state">Copy state</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="scopes">Granted scopes</label>
+        <output id="scopes">Not provided</output>
+      </div>
+    </section>
+
+    <section id="error-details" aria-label="Authorization error" hidden>
+      <div class="field">
+        <label for="error">Error</label>
+        <output id="error">Not provided</output>
+      </div>
+      <div class="field">
+        <label for="error-description">Error description</label>
+        <output id="error-description">Not provided</output>
+      </div>
+    </section>
+
+    <p id="copy-result" class="copy-result" role="status" aria-live="polite"></p>
+    <p>This page does not exchange the code for tokens. Continue in the local Pincio Insights command after verifying that the returned state matches the state created before authorization.</p>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const parameters = new URLSearchParams(window.location.search);
+      const response = {
+        code: parameters.get("code") || "",
+        state: parameters.get("state") || "",
+        scopes: parameters.get("scopes") || "",
+        error: parameters.get("error") || "",
+        errorDescription: parameters.get("error_description") || ""
+      };
+
+      window.history.replaceState(null, "", window.location.pathname);
+
+      const setText = (id, value) => {
+        document.getElementById(id).textContent = value || "Not provided";
+      };
+      const status = document.getElementById("status");
+
+      if (response.error || response.errorDescription) {
+        status.textContent = "TikTok returned an authorization error.";
+        status.classList.add("error");
+        document.getElementById("error-details").hidden = false;
+        setText("error", response.error);
+        setText("error-description", response.errorDescription);
+      } else if (response.code && response.state) {
+        status.textContent = "Authorization response received. Copy the code and state to the local command.";
+        document.getElementById("details").hidden = false;
+        setText("code", response.code);
+        setText("state", response.state);
+        setText("scopes", response.scopes);
+      } else {
+        status.textContent = "No complete authorization response was found in this URL.";
+        status.classList.add("error");
+      }
+
+      document.querySelectorAll("button[data-copy]").forEach((button) => {
+        const field = button.dataset.copy;
+        button.disabled = !response[field];
+        button.addEventListener("click", async () => {
+          const result = document.getElementById("copy-result");
+          try {
+            await navigator.clipboard.writeText(response[field]);
+            result.textContent = `${field === "code" ? "Code" : "State"} copied.`;
+          } catch {
+            result.textContent = "Copy was not available. Select the value and copy it manually.";
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
